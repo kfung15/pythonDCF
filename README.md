@@ -1,5 +1,5 @@
 # pythonDCF
-My attempt on slapping on a DCF model into a program
+My attempt on putting a DCF model into a program
 
 Steps:
 1. Retrieve revenue, EBITDA, EBIT and D&A. Forecast five years into the future by averaging out the change in numbers from year to year and extrapolating.
