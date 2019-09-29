@@ -3,7 +3,7 @@ import json
 from statistics import mean
 
 
-def get_financial_data(ticker):
+def get_financial_data(ticker,revenuePredict,creditRating):
 	
 	#First, grab the data from all three of the available financial statements
 	#Remember, things go in descending order, in terms of time!
@@ -82,19 +82,57 @@ def get_financial_data(ticker):
 	#DO NOT just extrapolate from previous percentage figures like you're doing right now!!!
 	
 	#MANUAL INPUT
-	IQ_revenue_predict = []
-	IQ_COGS_predict = []
+	
+	#Getting the revenue predictions from Capital IQ and then predicting somemore
+	trial_future_revenue = []
 
-	#Test total revenue and COGS list (temporary measure for testing purposes)
-	trial_future_revenue = [265595000000, 265595000000, 265595000000, 265595000000, 265595000000]
-	trial_future_COGS = [163756000000, 163756000000, 163756000000, 163756000000, 163756000000]
+	IQ_revenue_predict = list(revenuePredict.split(","))
+	
+
+	for x in range(len(IQ_revenue_predict)):
+		IQ_revenue_predict[x] = float(IQ_revenue_predict[x]) * 1000000.0
+	print("revenuePredict: " + str(IQ_revenue_predict))
+	#take the average of two growth rates from the three figures
+	growth_rates = []
+
+	for x in range(2):
+		growth_rates.append((float(IQ_revenue_predict[x + 1]) - float(IQ_revenue_predict[x]))/float(IQ_revenue_predict[x]))
+
+	print("Growth Rates 1: " + str(growth_rates)) 
+
+	average_growth_rate = mean(growth_rates)
+
+	print("averageGrowth1: " + str(average_growth_rate))
+
+	for x in range(len(IQ_revenue_predict)):
+		trial_future_revenue.append(IQ_revenue_predict[x])
+
+	trial_future_revenue.append(trial_future_revenue[-1] * (1.0 + average_growth_rate))
+
+	growth_rates = []
+	
+	for x in range(2):
+		growth_rates.append((trial_future_revenue[x + 2] - trial_future_revenue[x + 1])/trial_future_revenue[x + 1])
+
+	average_growth_rate = mean(growth_rates)
+
+	print("growthRates2: " + str(growth_rates))
+
+	print("averageGrowth2: " + str(average_growth_rate))
+
+	trial_future_revenue.append(trial_future_revenue[-1] * (1.0 + average_growth_rate))
+
+	print(trial_future_revenue)
+
+	#Test total COGS list (temporary measure for testing purposes)
+	trial_future_COGS = [163756000000, 163756000000, 163756000000, 163756000000, 203756000000]
 
 
-	cash_predict.append(latest_cash * cash_perc)
-	STI_predict.append(latest_STI * STI_perc)
-	receivables_predict.append(latest_receivables * receivables_perc)
-	inventories_predict.append(latest_inventories * inventories_perc)
-	other_CA_predict.append(latest_other_CA * other_CA_perc)
+	# cash_predict.append(latest_cash * cash_perc)
+	# STI_predict.append(latest_STI * STI_perc)
+	# receivables_predict.append(latest_receivables * receivables_perc)
+	# inventories_predict.append(latest_inventories * inventories_perc)
+	# other_CA_predict.append(latest_other_CA * other_CA_perc)
 
 	payables_predict.append(latest_payables * payables_perc)
 	STD_predict.append(latest_STD * STD_perc)
@@ -103,23 +141,23 @@ def get_financial_data(ticker):
 
 
 	for x in range(4):
-		cash_predict.append(cash_predict[x] * cash_perc)
-		STI_predict.append(STI_predict[x] * STI_perc)
-		receivables_predict.append(receivables_predict[x] * receivables_perc)
-		inventories_predict.append(inventories_predict[x] * inventories_perc)
-		other_CA_predict.append(other_CA_predict[x] * other_CA_perc)
+		# cash_predict.append(cash_predict[x] * cash_perc)
+		# STI_predict.append(STI_predict[x] * STI_perc)
+		# receivables_predict.append(receivables_predict[x] * receivables_perc)
+		# inventories_predict.append(inventories_predict[x] * inventories_perc)
+		# other_CA_predict.append(other_CA_predict[x] * other_CA_perc)
 		
 		payables_predict.append(payables_predict[x] * payables_perc)
 		STD_predict.append(STD_predict[x] * STD_perc)
 		other_CL_predict.append(other_CL_predict[x] * other_CL_perc)
 
 	#Uncomment once you figure out the Capital IQ stuff
-	# for x in range(len(trial_future_revenue)):
-	# 	cash_predict.append(trial_future_revenue[x] * cash_perc)
-	# 	STI_predict.append(trial_future_revenue[x] * STI_perc)
-	# 	receivables_predict.append(trial_future_revenue[x] * receivables_perc)
-	# 	inventories_predict.append(trial_future_revenue[x] * inventories_perc)
-	# 	other_CA_predict.append(trial_future_revenue[x] * other_CA_perc)
+	for x in range(len(trial_future_revenue)):
+		cash_predict.append(trial_future_revenue[x] * cash_perc)
+		STI_predict.append(trial_future_revenue[x] * STI_perc)
+		receivables_predict.append(trial_future_revenue[x] * receivables_perc)
+		inventories_predict.append(trial_future_revenue[x] * inventories_perc)
+		other_CA_predict.append(trial_future_revenue[x] * other_CA_perc)
 
 	# 	payables_predict.append(trial_future_COGS[x] * other_CA_perc)
 	# 	STD_predict.append(trial_future_COGS[x] * other_CA_perc)
@@ -242,7 +280,7 @@ def get_financial_data(ticker):
 	#MANUAL INPUT
 	risk_free_rate = 0.01687
 	expected_equity_mkt_return = 0.1815
-	average_spread = 0.0110
+	average_spread = (float(creditRating) / 100)
 	
 	share_price = float(real_time_price_json.get("price"))
 	diluted_shs_outstanding = float(income_statement_json.get("financials")[0].get("Weighted Average Shs Out (Dil)"))
@@ -305,13 +343,39 @@ def get_financial_data(ticker):
 
 	equity_value_per_share = equity_value/diluted_shs_outstanding
 
-	return("Equity Value Per Share: " + str(equity_value_per_share))
+	return(float(equity_value_per_share))
 
 
 def main():
 	#Change this to the company that you want to look up!
-	print("Company getting DCF'ed: AAPL")
-	print(get_financial_data("AAPL"))
+	
+	while True:
+		company = input("Which company do you want to perform a DCF model on? ")
+		revenuePredict = input("From Capital IQ, create a list of three predicted future revenues ")
+		creditRating = input("What is the bond credit rating of this company? ")
+		print("Company getting DCF'ed: " + str(company))
+		
+		
+		real_time_price_base = "https://financialmodelingprep.com/api/v3/stock/real-time-price/"
+		real_time_price_url = real_time_price_base + str(company)
+		real_time_price_results = requests.get(real_time_price_url)
+		real_time_price_json = real_time_price_results.json()
+
+		predicted_evps = get_financial_data(str(company), revenuePredict, creditRating)
+		share_price = float(real_time_price_json.get("price"))
+		print(str(company) + " stock price: " + str(share_price))
+		if predicted_evps > share_price:
+			difference = float(predicted_evps - share_price)
+			print("If this model is even remotely accurate, then we can conclude that " + str(company) + " stock is undervalued by $" + str(round(difference, 3)))
+		elif predicted_evps < share_price:
+			difference = float(share_price - predicted_evps)
+			print("If this model is even remotely accurate, then we can conclude that " + str(company) + " stock is overvalued by $" + str(round(difference, 3)))
+		else:
+			print("If this model is even remotely accurate, then LEVI is trading at par")
+
+		# except:
+		# 	print(str(company) + " either isn't a valid company, or this program somehow wonked up somewhere, sorry about that!")
+
 
 if __name__ == '__main__':
 	main()
