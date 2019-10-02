@@ -325,7 +325,7 @@ def get_financial_data(ticker,revenuePredict,creditRating):
 
 	#========================================================================
 	# now to find the terminal value
-	long_term_growth_rate = 0.0286
+	long_term_growth_rate = growth_rates[-1] * 0.1
 	last_fcf = FCF_predict[-1]
 
 	terminal_value = (last_fcf * (1 + long_term_growth_rate))/(wacc - long_term_growth_rate)
@@ -343,7 +343,26 @@ def get_financial_data(ticker,revenuePredict,creditRating):
 
 	equity_value_per_share = equity_value/diluted_shs_outstanding
 
-	return(float(equity_value_per_share))
+
+	#======================================================================
+	#Side project time!
+
+	#1. Check to see if revenue does not change so much over the years
+	ten_yr_rev = []
+	for x in range(-1, -6, -1):
+		ten_yr_rev.append(income_statement_json.get("financials")[x].get("Revenue"))
+
+	print("Ten Year Revenue History: " + str(ten_yr_rev))
+	threshold_rev_change = 0.06
+	rev_stable = "True"
+
+	for x in range(len(ten_yr_rev) - 1):
+		if abs((float(ten_yr_rev[x + 1]) - float(ten_yr_rev[x]))/float((ten_yr_rev[x]))) > threshold_rev_change:
+			print("Large change in revenue: " + str(ten_yr_rev[x]) + ", " + str(ten_yr_rev[x + 1]))
+			rev_stable = "False"
+			
+
+	return(float(equity_value_per_share), rev_stable)
 
 
 def main():
@@ -361,17 +380,32 @@ def main():
 		real_time_price_results = requests.get(real_time_price_url)
 		real_time_price_json = real_time_price_results.json()
 
+		ratios_base = "https://financialmodelingprep.com/api/v3/financial-ratios/"
+		ratios_price_url = ratios_base + str(company)
+		ratios_results = requests.get(ratios_price_url)
+		ratios_json = ratios_results.json()
+
 		predicted_evps = get_financial_data(str(company), revenuePredict, creditRating)
 		share_price = float(real_time_price_json.get("price"))
 		print(str(company) + " stock price: " + str(share_price))
-		if predicted_evps > share_price:
-			difference = float(predicted_evps - share_price)
+		if predicted_evps[0] > share_price:
+			difference = float(predicted_evps[0] - share_price)
 			print("If this model is even remotely accurate, then we can conclude that " + str(company) + " stock is undervalued by $" + str(round(difference, 3)))
-		elif predicted_evps < share_price:
-			difference = float(share_price - predicted_evps)
+		elif predicted_evps[0] < share_price:
+			difference = float(share_price - predicted_evps[0])
 			print("If this model is even remotely accurate, then we can conclude that " + str(company) + " stock is overvalued by $" + str(round(difference, 3)))
 		else:
 			print("If this model is even remotely accurate, then LEVI is trading at par")
+
+		print("---------------------------------")
+		print("Financial Ratios")
+		print('')
+		print("P/B Ratio: " + str(ratios_json.get("ratios")[0].get("investmentValuationRatios").get("priceToBookRatio")))
+		print("P/S Ratio: " + str(ratios_json.get("ratios")[0].get("investmentValuationRatios").get("priceToSalesRatio")))
+		print("P/E Ratio: " + str(ratios_json.get("ratios")[0].get("investmentValuationRatios").get("priceEarningsRatio")))
+		print("")
+		print("----------------------------------")
+		print("Stable Revenue: " + str(predicted_evps[1]))
 
 		# except:
 		# 	print(str(company) + " either isn't a valid company, or this program somehow wonked up somewhere, sorry about that!")
